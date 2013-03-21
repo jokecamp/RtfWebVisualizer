@@ -3,6 +3,7 @@
 <style>
 
  textarea { width:95%; height:125px; }
+ #help { font-weight:bold; background-color:yellow; }
 
 </style>
 </head>
@@ -21,6 +22,7 @@ green255\blue0;\red255\green255\blue255;}{\stylesheet{\fs20
 <br />
 <input type="button" value="Make it Pretty" onclick="Format();" />
 
+<div id="help"></div>
 <pre id="output"></pre>
 
 <a href="http://msdn.microsoft.com/en-us/library/office/aa140302(v=office.10).aspx">RTF Control words</a>
@@ -45,6 +47,49 @@ green255\blue0;\red255\green255\blue255;}{\stylesheet{\fs20
 </pre>
 
 <script>
+
+
+if(!window.Kolich){
+  Kolich = {};
+}
+
+Kolich.Selector = {};
+Kolich.Selector.getSelected = function(){
+  var t = '';
+  if(window.getSelection){
+    t = window.getSelection();
+  }else if(document.getSelection){
+    t = document.getSelection();
+  }else if(document.selection){
+    t = document.selection.createRange().text;
+  }
+  return t;
+}
+
+Kolich.Selector.mouseup = function(){
+  var st = Kolich.Selector.getSelected();
+  if(st!=''){
+    console.log("selected " + st);
+
+    var docs = new Array();
+    docs["rtf"] = "rich text format";
+    docs["ansi"] = "ANSI (the default) required";
+    docs["deff"] = "deffN default font table ";
+
+    console.log(docs);
+    if (docs[st] != null) {
+       console.log(docs[st]);
+       $("#help").html(docs[st]);
+    }
+
+  }
+}
+
+$(document).ready(function(){
+  $(document).bind("mouseup", Kolich.Selector.mouseup);
+});
+
+
 
  function Format() {
   
