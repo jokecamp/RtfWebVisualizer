@@ -3,12 +3,22 @@
 <style>
 
  textarea { width:95%; height:125px; }
+ #rtf { background-color:#E2F0D9; }
+ #PrettyRTF { height:420px; background-color:#DDEBF7; }
  #help { font-weight:bold; background-color:yellow; }
+ #loadRtfButton { background-color:#B7E58A; }
+ #makePrettyButton { background-color:#FAD7AC; }
+ #savePrettyButton { background-color:#B8E2F5; }
 
 </style>
 </head>
 <body>
 
+<div style="margin-bottom: 1em;">
+<input type="button" id="loadRtfButton" value="Load RTF file" onclick="document.getElementById('rtfFile').click();" />
+<span id="rtfFileInfo" role="status" style="margin-left: 0.5em;" title="The browser does not expose the full local file path.">No file loaded</span>
+<input type="file" id="rtfFile" accept=".rtf,application/rtf,text/rtf" onchange="LoadRtfFile(this);" style="display: none;" />
+</div>
 <textarea id="rtf">
 {\rtf\ansi\deff0{\fonttbl{\f0\froman Tms Rmn;}{\f1\fdecor 
 Symbol;}{\f2\fswiss Helv;}}{\colortbl;\red0\green0\blue0;
@@ -20,11 +30,17 @@ green255\blue0;\red255\green255\blue255;}{\stylesheet{\fs20
 {\nofpages1}{\nofwords0}{\nofchars0}{\vern8351}}\widoctrl\ftnbj \sectd\linex0\endnhere \pard\plain \fs20 This is plain text.\par}
 </textarea>
 <br />
-<input type="button" value="Make it Pretty" onclick="Format();" />
+<input type="button" id="makePrettyButton" value="Make it Pretty" onclick="Format();" style="margin: 1em 0;" />
 
 <div id="help"></div>
-<pre id="output"></pre>
+<textarea id="PrettyRTF" readonly wrap="off"></textarea>
+<div style="margin-top: 1em;">
+<input type="button" id="savePrettyButton" value="Save Pretty RTF" onclick="SavePrettyRtf();" />
+<span id="savePrettyStatus" role="status" style="margin-left: 0.5em;"></span>
+</div>
 
+<br />
+<br />
 <a href="http://msdn.microsoft.com/en-us/library/office/aa140302(v=office.10).aspx">RTF Control words</a>
 
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
@@ -47,6 +63,77 @@ green255\blue0;\red255\green255\blue255;}{\stylesheet{\fs20
 </pre>
 
 <script>
+var loadedRtfFileName = "document.rtf";
+
+async function SavePrettyRtf() {
+  var output = document.getElementById("PrettyRTF").value;
+  if (!output) {
+    alert("Click Make it Pretty before saving.");
+    return;
+  }
+
+  var fileName = loadedRtfFileName.replace(/\.rtf$/i, "") + "_Pretty.rtf";
+  var button = document.getElementById("savePrettyButton");
+  var status = document.getElementById("savePrettyStatus");
+  button.disabled = true;
+  status.textContent = "";
+  try {
+    var blob = new Blob([output], { type: "application/rtf" });
+    if (typeof window.showSaveFilePicker === "function") {
+      var handle = await window.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [{ description: "RTF document", accept: { "application/rtf": [".rtf"] } }]
+      });
+      var writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      status.textContent = "Saved: " + handle.name;
+    } else {
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
+      status.textContent = "Download requested: " + fileName;
+    }
+  } catch (error) {
+    if (error.name !== "AbortError") {
+      alert("Unable to save the RTF file: " + error.message);
+    }
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function LoadRtfFile(input) {
+  var file = input.files[0];
+  if (!file) {
+    return;
+  }
+
+  var button = document.getElementById("loadRtfButton");
+  var reader = new FileReader();
+  button.disabled = true;
+  reader.onload = function() {
+    loadedRtfFileName = file.name;
+    document.getElementById("savePrettyStatus").textContent = "";
+    document.getElementById("rtf").value = reader.result;
+    document.getElementById("rtfFileInfo").textContent = "Loaded file: " + file.name;
+    document.getElementById("PrettyRTF").value = "";
+    document.getElementById("help").textContent = "";
+  };
+  reader.onerror = function() {
+    alert("Unable to read the selected RTF file.");
+  };
+  reader.onloadend = function() {
+    button.disabled = false;
+    input.value = "";
+  };
+  reader.readAsText(file);
+}
 
 
 if(!window.Kolich){
@@ -130,7 +217,7 @@ $(document).ready(function(){
 
    //output = rtf.replace(new RegExp("{", "g"), '\n{');
    //console.log(output);
-   $("#output").html(output);
+   document.getElementById("PrettyRTF").value = output;
 
  };
 
